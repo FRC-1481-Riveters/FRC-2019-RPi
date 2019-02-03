@@ -1,3 +1,4 @@
+
 /*----------------------------------------------------------------------------*/
 /* Copyright (c) 2018 FIRST. All Rights Reserved.                             */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
@@ -23,6 +24,8 @@ import edu.wpi.cscore.UsbCamera;
 import edu.wpi.cscore.VideoSource;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
 
@@ -209,20 +212,29 @@ public final class Main {
 
     Object targetLock = new Object();
 
+    long m_startingTimeStamp;
+
     @Override
     public void process(Mat mat) {
       float fCurrentTarget;
+
+      m_startingTimeStamp = System.currentTimeMillis();
+
       fCurrentTarget = targetFinder.getVisionTargetLocation(mat);
 
-      synchronized(targetLock) {
+      synchronized (targetLock) {
         m_target = fCurrentTarget;
       }
+    }
+
+    public long getStartTime() {
+      return m_startingTimeStamp;
     }
 
     public float getTarget() {
       float fCurrentTarget;
 
-      synchronized(targetLock) {
+      synchronized (targetLock) {
         fCurrentTarget = m_target;
       }
       return fCurrentTarget;
@@ -258,14 +270,29 @@ public final class Main {
       cameras.add(startCamera(cameraConfig));
     }
 
+    NetworkTable table = ntinst.getTable("Vision");
+    NetworkTableEntry targetErrorEntry = table.getEntry("targetError");
+    NetworkTableEntry targetProcessingTimeEntry = table.getEntry("targetProcessingTime");
+
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
 
-      VisionThread visionThread = new VisionThread(cameras.get(0),new MyPipeline(), pipeline -> {
-                long startTime = System.currentTimeMillis();
-                System.out.print(pipeline.getTarget());
-                System.out.print(new String().format(" %.4f\n",(float)(System.currentTimeMillis()-startTime)/1000.0));
-      });
+      float lastTargetHeading = Float.NaN;
+      VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
+        long startTime = pipeline.getStartTime();
+
+        float fTargetNormalizedHeading = pipeline.getTarget();
+        float fRelativeTargetHeading = fTargetNormalizedHeading * 150.0f /* FOV is 150 degrees */ / 2.0f;
+        long targetProcessingTime = System.currentTimeMillis() - startTime + 33 /* lag of camera at 30fps */;
+
+        targetErrorEntry.setValue(fRelativeTargetHeading);
+        targetProcessingTimeEntry.setValue(targetProcessingTime);
+
+        if (Math.abs(lastTargetHeading - fRelativeTargetHeading) > 0.1) {
+        System.out.println(
+            new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading, targetProcessingTime));
+          }
+          });
 
       visionThread.start();
     }
