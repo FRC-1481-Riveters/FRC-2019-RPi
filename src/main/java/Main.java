@@ -44,6 +44,7 @@ import visiontargetfinder.*;
                "path": <path, e.g. "/dev/video0">
                "pixel format": <"MJPEG", "YUYV", etc>   // optional
                "width": <video mode width>              // optional
+               "FOV": <camera's horizontal field of view in degrees> // optional (150 degrees if not specified)
                "height": <video mode height>            // optional
                "fps": <video mode fps>                  // optional
                "brightness": <percentage brightness>    // optional
@@ -70,6 +71,7 @@ import visiontargetfinder.*;
 
 public final class Main {
   private static String configFile = "/boot/frc.json";
+  static float m_lastTargetHeading = Float.NaN;
 
   @SuppressWarnings("MemberName")
   public static class CameraConfig {
@@ -82,6 +84,7 @@ public final class Main {
   public static int team;
   public static boolean server;
   public static List<CameraConfig> cameraConfigs = new ArrayList<>();
+  static long fieldOfView = 150;
 
   private Main() {
   }
@@ -202,9 +205,6 @@ public final class Main {
     return camera;
   }
 
-  /**
-   * Example pipeline.
-   */
   public static class MyPipeline implements VisionPipeline {
     static float m_target;
 
@@ -222,6 +222,11 @@ public final class Main {
 
       fCurrentTarget = targetFinder.getVisionTargetLocation(mat);
 
+      /*
+       * Because the VisionPipeline is expected to run in a separate thread, lock
+       * access to the m_target value to ensure no one else is attempting to read it
+       * while this pipeline is writing it.
+       */
       synchronized (targetLock) {
         m_target = fCurrentTarget;
       }
@@ -270,29 +275,47 @@ public final class Main {
       cameras.add(startCamera(cameraConfig));
     }
 
-    NetworkTable table = ntinst.getTable("Vision");
-    NetworkTableEntry targetErrorEntry = table.getEntry("targetError");
-    NetworkTableEntry targetProcessingTimeEntry = table.getEntry("targetProcessingTime");
+    NetworkTable visionTable = ntinst.getTable("Vision");
+    NetworkTableEntry targetErrorEntry = visionTable.getEntry("targetError");
+    NetworkTableEntry targetProcessingTimeEntry = visionTable.getEntry("targetProcessingTime");
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
 
-      float lastTargetHeading = Float.NaN;
+      try {
+        /*
+         * Get the first camera's configuration JSONElement "FOV" if it exists, then
+         * render it as a long. If the element isn't in the JSON /boot/frc.json file,
+         * the get() will return a null, which will cause the getAsLong() to throw an
+         * exception. Just use the default, initially set, value intead of what's in the
+         * file.
+         */
+        fieldOfView = cameraConfigs.get(0).config.get("FOV").getAsLong();
+      } catch (Exception e) {
+        System.out.println(new String()
+            .format("Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.\n", fieldOfView));
+      }
+
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
         long startTime = pipeline.getStartTime();
 
         float fTargetNormalizedHeading = pipeline.getTarget();
-        float fRelativeTargetHeading = fTargetNormalizedHeading * 150.0f /* FOV is 150 degrees */ / 2.0f;
-        long targetProcessingTime = System.currentTimeMillis() - startTime + 33 /* lag of camera at 30fps */;
+        float fRelativeTargetHeading = fTargetNormalizedHeading * (float) fieldOfView / 2.0f;
+        long targetProcessingTime = System.currentTimeMillis() - startTime;
 
+        /*
+         * Tell the roborio what the target's new heading is. Also include the time it
+         * took to process this picture. This way, the roboRIO can figure out where it
+         * was actually facing at the time the picture was taken, and account for the
+         * lag due to processing the picture
+         */
         targetErrorEntry.setValue(fRelativeTargetHeading);
         targetProcessingTimeEntry.setValue(targetProcessingTime);
 
-        if (Math.abs(lastTargetHeading - fRelativeTargetHeading) > 0.1) {
-        System.out.println(
-            new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading, targetProcessingTime));
-          }
-          });
+        System.out.println(new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
+            targetProcessingTime));
+
+      });
 
       visionThread.start();
     }
