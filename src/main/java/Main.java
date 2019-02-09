@@ -28,6 +28,7 @@ import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
+import edu.wpi.cscore.CvSource;
 
 import org.opencv.core.Mat;
 
@@ -214,6 +215,8 @@ public final class Main {
 
     long m_startingTimeStamp;
 
+    Mat annotatedMat;
+
     @Override
     public void process(Mat mat) {
       float fCurrentTarget;
@@ -230,9 +233,16 @@ public final class Main {
       synchronized (targetLock) {
         m_target = fCurrentTarget;
       }
+
+      annotatedMat = mat;
+      targetFinder.annotateStream(annotatedMat);
     }
 
-    public long getStartTime() {
+    public Mat getAnnotatedMat() {
+      return annotatedMat;
+    }
+
+     public long getStartTime() {
       return m_startingTimeStamp;
     }
 
@@ -282,6 +292,7 @@ public final class Main {
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
 
+      CvSource outputStream = CameraServer.getInstance().putVideo("Annotated Vision", 320, 240);
       try {
         /*
          * Get the first camera's configuration JSONElement "FOV" if it exists, then
@@ -314,6 +325,8 @@ public final class Main {
 
         System.out.println(new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
             targetProcessingTime));
+
+            outputStream.putFrame(pipeline.getAnnotatedMat());
 
       });
 

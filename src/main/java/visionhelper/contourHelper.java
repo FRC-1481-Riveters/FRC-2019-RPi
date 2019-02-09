@@ -5,6 +5,8 @@ import org.opencv.core.Point;
 import org.opencv.core.MatOfPoint;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.RotatedRect;
 
 public class contourHelper {
 
@@ -25,6 +27,15 @@ public class contourHelper {
 
 		return new Vec2f(line);
 
+	}
+
+	public RotatedRect getRotatedRectangle(MatOfPoint contour) {
+
+		return Imgproc.minAreaRect(new MatOfPoint2f(contour.toArray()));
+	}
+
+	public double getArea(MatOfPoint contour) {
+		return Imgproc.contourArea(contour);
 	}
 
 	public Point getCenter(MatOfPoint contour1, MatOfPoint contour2) {
