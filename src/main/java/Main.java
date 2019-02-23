@@ -314,7 +314,7 @@ public final class Main {
         float fTargetNormalizedHeading = pipeline.getTarget();
         float fRelativeTargetHeading = fTargetNormalizedHeading * (float) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
-  double RelativeTargetHeadingRadians = 2 * Math.PI * fRelativeTargetHeading / 360; 
+  
 
   
         /*
@@ -323,7 +323,7 @@ public final class Main {
          * was actually facing at the time the picture was taken, and account for the
          * lag due to processing the picture
          */
-        targetErrorEntry.setValue(RelativeTargetHeadingRadians);
+        targetErrorEntry.setValue(fRelativeTargetHeading);
         targetProcessingTimeEntry.setValue(targetProcessingTime);
         
         System.out.println(new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
