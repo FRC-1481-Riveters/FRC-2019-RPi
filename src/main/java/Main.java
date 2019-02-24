@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.Math;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -313,7 +314,9 @@ public final class Main {
         float fTargetNormalizedHeading = pipeline.getTarget();
         float fRelativeTargetHeading = fTargetNormalizedHeading * (float) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
+  
 
+  
         /*
          * Tell the roborio what the target's new heading is. Also include the time it
          * took to process this picture. This way, the roboRIO can figure out where it
@@ -322,7 +325,7 @@ public final class Main {
          */
         targetErrorEntry.setValue(fRelativeTargetHeading);
         targetProcessingTimeEntry.setValue(targetProcessingTime);
-
+        
         System.out.println(new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
             targetProcessingTime));
 
