@@ -47,6 +47,29 @@ public class Vec2f {
 		return vecY;
 	}
 
+	
+	public float getAngle() {
+
+		try {
+			// Opposite over Adjacent
+			return (float) Math.toDegrees(Math.atan(vecX / vecY));
+		} catch (ArithmeticException e) {
+
+			/*
+			 * Handle situations where the atan blows up. If the vecY is 0, the vector is
+			 * lying on the X axis. Determine if it's pointing left or right and assign an
+			 * angle as appropriate.
+			 * 
+			 * Remember, the Y axis is flipped about the X axis; down is increasing Y, and
+			 * up is decreasing Y.
+			 */
+			if (vecX > 0.0) {
+				return 90;
+			} else {
+				return -90;
+			}
+		}
+	}
 
 
 	public String dump() {

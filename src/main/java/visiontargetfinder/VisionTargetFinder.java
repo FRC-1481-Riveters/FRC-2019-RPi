@@ -111,11 +111,11 @@ public class VisionTargetFinder {
 
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
-				if (ratio < 0.7) {
+				if (ratio < 0.85) {
 					// System.out.println(String.format("Rejected contour with ratio %f,
 					// contour area %f, rectangle
 					// %s",(float)ratio,contourArea,rectangle.toString()));
-				//	continue;
+					continue;
 				}
 
 /* 
@@ -147,7 +147,7 @@ public class VisionTargetFinder {
 				 * processing.
 				 * 
 				 */
-				float lineAngle = helper.getLineAngle(vector);
+				float lineAngle = vector.getAngle();
 
 				if (!isTiltedLikeVisionTarget(lineAngle)) {
 					continue;
@@ -189,7 +189,7 @@ public class VisionTargetFinder {
 				 * This is a left-side vision target. Remember this target and keep it in mind
 				 * until we find a right-side target.
 				 */
-				if (isTiltedLikeLeftVisionTarget(helper.getLineAngle(item))) {
+				if (isTiltedLikeLeftVisionTarget(item.getAngle())) {
 					lastLeftTarget = item;
 					continue;
 				}
@@ -198,7 +198,7 @@ public class VisionTargetFinder {
 				 * Oooooo!!! A right-side target! See if we have a left-side target to pair with
 				 * it!
 				 */
-				if (isTiltedLikeRightVisionTarget(helper.getLineAngle(item))) {
+				if (isTiltedLikeRightVisionTarget(item.getAngle())) {
 					if (lastLeftTarget != null) {
 						/*
 						 * We DO have a left-side target to pair with it! Pair these two vision targets
