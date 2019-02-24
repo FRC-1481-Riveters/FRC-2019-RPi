@@ -37,6 +37,7 @@ public class VisionTargetFinder {
 	ArrayList<MatOfPoint> allContours;
 	ArrayList<Vec2f> goodVectors = new ArrayList<Vec2f>();
 	ArrayList<VisionTargetPair> targetPairs = new ArrayList<>();
+	Point m_selectedPoint;
 
 	public void annotateStream(Mat matImage) {
 
@@ -48,11 +49,18 @@ public class VisionTargetFinder {
 			Imgproc.line(matImage, new Point(targetPair.LTarget.x, targetPair.LTarget.y),
 					new Point(targetPair.RTarget.x, targetPair.RTarget.y), new Scalar(0, 0, 255));
 		}
+
+		if (m_selectedPoint != null) {
+			Imgproc.drawMarker(matImage, m_selectedPoint, new Scalar(0, 0, 255), Imgproc.MARKER_TILTED_CROSS);
+			Imgproc.line(matImage, new Point(m_selectedPoint.x, 0), new Point(m_selectedPoint.x, matImage.cols()),
+					new Scalar(0, 0, 255), 5);
+		}
+
 	}
 
 	public float getVisionTargetLocation(Mat matImage) {
 
-		float position = 0.0f;
+		float position = Float.NaN;
 
 		/*
 		 * Process the image and look for contours that might be vision targets.
@@ -110,7 +118,7 @@ public class VisionTargetFinder {
 				//	continue;
 				}
 
-				/* 
+/* 
 				* If this is a vision target, it'll be a line
 				* that's right in the middle of the rectangle, like this
 				* 
@@ -266,6 +274,8 @@ public class VisionTargetFinder {
 				 */
 
 				position = 2.0f * (((float) closestCenterPoint.x / matImage.cols()) - 0.5f);
+
+				m_selectedPoint = closestCenterPoint;
 			}
 		}
 
