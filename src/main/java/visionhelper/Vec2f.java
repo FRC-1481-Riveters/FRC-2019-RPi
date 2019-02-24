@@ -50,7 +50,7 @@ public class Vec2f {
 
 
 	public String dump() {
-		return (new String().format("[x=%f, y=%f, vecX=%f, vecY=%f]", x, y, vecX, vecY));
+		return (String.format("[x=%f, y=%f, vecX=%f, vecY=%f]", x, y, vecX, vecY));
 	}
 
 }

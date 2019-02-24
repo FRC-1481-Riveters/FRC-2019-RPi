@@ -104,7 +104,7 @@ public class VisionTargetFinder {
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
 				if (ratio < 0.7) {
-					// System.out.println(new String().format("Rejected contour with ratio %f,
+					// System.out.println(String.format("Rejected contour with ratio %f,
 					// contour area %f, rectangle
 					// %s",(float)ratio,contourArea,rectangle.toString()));
 				//	continue;

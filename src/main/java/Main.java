@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.lang.Math;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -304,8 +303,7 @@ public final class Main {
          */
         fieldOfView = cameraConfigs.get(0).config.get("FOV").getAsLong();
       } catch (Exception e) {
-        System.out.println(new String()
-            .format("Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.\n", fieldOfView));
+        System.out.println(String.format("Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.\n", fieldOfView));
       }
 
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
@@ -326,7 +324,7 @@ public final class Main {
         targetErrorEntry.setValue(fRelativeTargetHeading);
         targetProcessingTimeEntry.setValue(targetProcessingTime);
         
-        System.out.println(new String().format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
+        System.out.println(String.format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
             targetProcessingTime));
 
             outputStream.putFrame(pipeline.getAnnotatedMat());
