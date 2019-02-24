@@ -242,7 +242,7 @@ public final class Main {
       return annotatedMat;
     }
 
-     public long getStartTime() {
+    public long getStartTime() {
       return m_startingTimeStamp;
     }
 
@@ -288,6 +288,7 @@ public final class Main {
     NetworkTable visionTable = ntinst.getTable("Vision");
     NetworkTableEntry targetErrorEntry = visionTable.getEntry("targetError");
     NetworkTableEntry targetProcessingTimeEntry = visionTable.getEntry("targetProcessingTime");
+    NetworkTableEntry targetInformation = visionTable.getEntry("targetInformation");
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
@@ -303,7 +304,8 @@ public final class Main {
          */
         fieldOfView = cameraConfigs.get(0).config.get("FOV").getAsLong();
       } catch (Exception e) {
-        System.out.println(String.format("Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.\n", fieldOfView));
+        System.out.println(String.format(
+            "Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.", fieldOfView));
       }
 
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
@@ -312,22 +314,40 @@ public final class Main {
         float fTargetNormalizedHeading = pipeline.getTarget();
         float fRelativeTargetHeading = fTargetNormalizedHeading * (float) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
-  
 
-  
         /*
-         * Tell the roborio what the target's new heading is. Also include the time it
-         * took to process this picture. This way, the roboRIO can figure out where it
-         * was actually facing at the time the picture was taken, and account for the
-         * lag due to processing the picture
+         * Check if the normalized returned heading is NaN (Not a Number). If it's Not a
+         * Number, the target finder failed to find a heading and the value shouldn't be
+         * used. Don't send invalid values to the RoboRIO.
          */
-        targetErrorEntry.setValue(fRelativeTargetHeading);
-        targetProcessingTimeEntry.setValue(targetProcessingTime);
-        
-        System.out.println(String.format("visionTargetError:%3.2f processingTime:%d", fRelativeTargetHeading,
-            targetProcessingTime));
+        if (!Float.isNaN(fTargetNormalizedHeading)) {
+          /*
+           * Tell the roborio what the target's new heading is. Also include the time it
+           * took to process this picture. This way, the roboRIO can figure out where it
+           * was actually facing at the time the picture was taken, and account for the
+           * lag due to processing the picture
+           */
+          targetErrorEntry.setValue(fRelativeTargetHeading);
+          targetProcessingTimeEntry.setValue(targetProcessingTime);
 
-            outputStream.putFrame(pipeline.getAnnotatedMat());
+          /*
+           * To keep the information coherent (so that the heading and the time stamp are
+           * coordinated) combine the numbers into a single string and send the whole
+           * string to the RoboRIO together. That way, both pieces of information show up
+           * at exactly the same time. An example of this output is
+           * 
+           * 3.14529424,150
+           * 
+           * where the floating point number is the heading and the integer is the age of the
+           * information in milliseconds.
+           */
+          targetInformation.setString(String.format("%f,%d", fRelativeTargetHeading, targetProcessingTime));
+        }
+
+        System.out.println(String.format("visionTargetError:%3.1f degrees, processingTime:%d ms",
+            fRelativeTargetHeading, targetProcessingTime));
+
+        outputStream.putFrame(pipeline.getAnnotatedMat());
 
       });
 
