@@ -297,13 +297,13 @@ public class VisionTargetFinder {
 
 	}
 
-	boolean isTiltedLikeRightVisionTarget(float angle) {
+	boolean isTiltedLikeLeftVisionTarget(float angle) {
 
 		return (angle > -30.0 && angle < -10.0);
 
 	}
 
-	boolean isTiltedLikeLeftVisionTarget(float angle) {
+	boolean isTiltedLikeRightVisionTarget(float angle) {
 
 		return (angle > 10.0 && angle < 30.0);
 
