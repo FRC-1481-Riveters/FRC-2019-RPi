@@ -1,13 +1,12 @@
 package visiontargetfinder;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 
 import org.opencv.core.*;
 import org.opencv.core.RotatedRect;
 import org.opencv.imgproc.Imgproc;
 
-import visionhelper.Vec2f;
 import visionhelper.contourHelper;
 import visiontargetfilter.*;
 
@@ -25,33 +24,50 @@ public class VisionTargetFinder {
 	}
 
 	private class VisionTargetPair {
-		public Vec2f LTarget;
-		public Vec2f RTarget;
+		public RotatedRect LTarget;
+		public RotatedRect RTarget;
 
-		public VisionTargetPair(Vec2f LeftTarget, Vec2f RightTarget) {
+		public VisionTargetPair(RotatedRect LeftTarget, RotatedRect RightTarget) {
 			LTarget = LeftTarget;
 			RTarget = RightTarget;
 		}
 	}
 
 	ArrayList<MatOfPoint> allContours;
-	ArrayList<Vec2f> goodVectors = new ArrayList<Vec2f>();
+	ArrayList<RotatedRect> goodRectangles = new ArrayList<>();
 	ArrayList<VisionTargetPair> targetPairs = new ArrayList<>();
 	Point m_selectedPoint;
 
 	public void annotateStream(Mat matImage) {
 
+		/* Draw all the contours we found in green. */
 		for (int index = 0; index < allContours.size(); ++index) {
 			Imgproc.drawContours(matImage, allContours, index, new Scalar(0, 255, 0));
 		}
 
+		/* Draw the good rectangles that we found in blue. */
+		for (RotatedRect rRect : goodRectangles) {
+			Point[] vertices = new Point[4];
+			rRect.points(vertices);
+			for (int j = 0; j < 4; j++) {
+				Imgproc.line(matImage, vertices[j], vertices[(j + 1) % 4], new Scalar(255, 0, 0));
+			}
+		}
+
+		/* Draw the line between the target pairs we found in red. */
 		for (VisionTargetPair targetPair : targetPairs) {
-			Imgproc.line(matImage, new Point(targetPair.LTarget.x, targetPair.LTarget.y),
-					new Point(targetPair.RTarget.x, targetPair.RTarget.y), new Scalar(0, 0, 255));
+			Imgproc.line(matImage, new Point(targetPair.LTarget.center.x, targetPair.LTarget.center.y),
+					new Point(targetPair.RTarget.center.x, targetPair.RTarget.center.y), new Scalar(0, 0, 255));
 		}
 
 		if (m_selectedPoint != null) {
+			/*
+			 * Draw a marker in the middle of the selected target pair's connecting line in
+			 * red.
+			 */
 			Imgproc.drawMarker(matImage, m_selectedPoint, new Scalar(0, 0, 255), Imgproc.MARKER_TILTED_CROSS);
+
+			/* Draw a thick, vertical line through the target point in red. */
 			Imgproc.line(matImage, new Point(m_selectedPoint.x, 0), new Point(m_selectedPoint.x, matImage.cols()),
 					new Scalar(0, 0, 255), 5);
 		}
@@ -68,7 +84,7 @@ public class VisionTargetFinder {
 		 */
 		visionTargetFilter.process(matImage);
 
-		goodVectors.clear();
+		goodRectangles.clear();
 		targetPairs.clear();
 
 		/*
@@ -118,42 +134,20 @@ public class VisionTargetFinder {
 					continue;
 				}
 
-				/* 
-				* If this is a vision target, it'll be a line
-				* that's right in the middle of the rectangle, like this
-				* 
-				*              /
-				*             /   <--- sweet vectorX/Y that passes through the center of vision target contour
-				*            /
-				*        /+ /
-				*       /  /  +
-				*      /  /  /
-				*     /  +<-/-------- center of mass (x,y)
-				*    /  /  /
-				*   /  /  /
-				*  +  /  /  } -- vision target contour
-				*    /  +
-				*   /
-				*  / 
-				*  
-				*/
-
-				Vec2f vector = helper.getCenterLine(item);
-
 				/*
-				 * Figure out the angle of the line and check to see if it's canted to the right
-				 * or the left at the correct angle. If it's the right angle (for a left or
-				 * right vision target), save this vector to the "goodVectors" list for later
-				 * processing.
+				 * Figure out the angle of the rectangle and check to see if it's canted to the
+				 * right or the left at the correct angle. If it's the right angle (for a left
+				 * or right vision target), save this rectangle to the "goodRectangles" list for
+				 * later processing.
 				 * 
 				 */
-				float lineAngle = vector.getAngle();
+				double lineAngle = getAdjustedAngle(rectangle);
 
 				if (!isTiltedLikeVisionTarget(lineAngle)) {
 					continue;
 				}
 
-				goodVectors.add(vector);
+				goodRectangles.add(rectangle);
 			}
 
 			/*
@@ -164,7 +158,7 @@ public class VisionTargetFinder {
 			 * further to the left on the screen the the vision target is.
 			 */
 
-			goodVectors.sort(Comparator.comparing(Vec2f::getX));
+			Collections.sort(goodRectangles, (o1, o2) -> (int) o1.center.x - (int) o2.center.x);
 
 			/*
 			 * Now pair each leftside vision target to a rightside vision target. Do this by
@@ -182,14 +176,13 @@ public class VisionTargetFinder {
 			 * 1 left vision target + 1 right vision target = a targetPair.
 			 * 
 			 */
-			Vec2f lastLeftTarget = null;
-			for (Vec2f item : goodVectors) {
-
+			RotatedRect lastLeftTarget = null;
+			for (RotatedRect item : goodRectangles) {
 				/*
 				 * This is a left-side vision target. Remember this target and keep it in mind
 				 * until we find a right-side target.
 				 */
-				if (isTiltedLikeLeftVisionTarget(item.getAngle())) {
+				if (isTiltedLikeLeftVisionTarget(getAdjustedAngle(item))) {
 					lastLeftTarget = item;
 					continue;
 				}
@@ -198,7 +191,7 @@ public class VisionTargetFinder {
 				 * Oooooo!!! A right-side target! See if we have a left-side target to pair with
 				 * it!
 				 */
-				if (isTiltedLikeRightVisionTarget(item.getAngle())) {
+				if (isTiltedLikeRightVisionTarget(getAdjustedAngle(item))) {
 					if (lastLeftTarget != null) {
 						if (areHorizontallyAligned(lastLeftTarget, item)) {
 
@@ -247,13 +240,14 @@ public class VisionTargetFinder {
 				 * remember that targetPair's center point in "closestCenterPoint"
 				 * 
 				 */
-				Point closestCenterPoint = helper.getCenter(targetPairs.get(0).LTarget, targetPairs.get(0).RTarget);
+				Point closestCenterPoint = helper.getCenter(targetPairs.get(0).LTarget.center,
+						targetPairs.get(0).RTarget.center);
 				double leastDistanceFromCenter = Math.abs((matImage.cols() / 2) - closestCenterPoint.x);
 
 				for (int index = 1; index < targetPairs.size(); ++index) {
 
-					Point centerPoint = helper.getCenter(targetPairs.get(index).LTarget,
-							targetPairs.get(index).RTarget);
+					Point centerPoint = helper.getCenter(targetPairs.get(index).LTarget.center,
+							targetPairs.get(index).RTarget.center);
 					double distanceFromCenter = Math.abs((matImage.cols() / 2) - centerPoint.x);
 
 					if (distanceFromCenter < leastDistanceFromCenter) {
@@ -286,30 +280,22 @@ public class VisionTargetFinder {
 
 	}
 
-	float getLineAngle(Mat line) {
-
-		// Opposite over Adjacent
-		double ratio = line.get(0, 0)[0] / line.get(1, 0)[0];
-
-		return (float) Math.toDegrees(Math.atan(ratio));
-	}
-
-	boolean isTiltedLikeVisionTarget(float angle) {
+	boolean isTiltedLikeVisionTarget(double angle) {
 
 		// left vision target --------------------- Right vision target
 		return (isTiltedLikeLeftVisionTarget(angle) || isTiltedLikeRightVisionTarget(angle));
 
 	}
 
-	boolean isTiltedLikeLeftVisionTarget(float angle) {
+	boolean isTiltedLikeLeftVisionTarget(double angle) {
 
-		return (angle > -30.0 && angle < -10.0);
+		return (angle < 85.7 && angle > 55.7);
 
 	}
 
-	boolean isTiltedLikeRightVisionTarget(float angle) {
+	boolean isTiltedLikeRightVisionTarget(double angle) {
 
-		return (angle > 10.0 && angle < 30.0);
+		return (angle > 94.3 && angle < 124.3);
 
 	}
 
@@ -317,27 +303,48 @@ public class VisionTargetFinder {
 	 * Check if the origins of these two vectors are close to horizontal with each
 	 * other. They must draw a line that's mostly horizontal.
 	 */
-	boolean areHorizontallyAligned(Vec2f first, Vec2f second) {
+	boolean areHorizontallyAligned(RotatedRect first, RotatedRect second) {
 		try {
-			double lineAngle = Math.toDegrees(Math.atan((first.y - second.y) / (first.x - second.x)));
+			double lineAngle = Math
+					.toDegrees(Math.atan((first.center.y - second.center.y) / (first.center.x - second.center.x)));
 
 			if (lineAngle < -15.0 || lineAngle > 15.0) {
 				/*
 				 * This is not a very horizontal line. Return false indicating that these two
-				 * vector's origins are not on a horizontal enough line.
+				 * rectangles's origins are not on a horizontal enough line.
 				 */
 				return false;
 			}
 		} catch (ArithmeticException e) {
 			/*
 			 * Something went wrong with the calculation. Don't use this filter to filter
-			 * out a pair of vectors' origins. Just return a fake answer.
+			 * out a pair of rectangles' origins. Just return a fake answer.
 			 */
-			System.out.println(String.format("Couldn't compute horizontal line angle between %s and %s", first.dump(),
-					second.dump()));
+			System.out.println(String.format("Couldn't compute horizontal line angle between %s and %s",
+					first.toString(), second.toString()));
 		}
 
 		return true;
+	}
+
+	/*
+	 * Rotated rectangle angles are weird. See
+	 * https://namkeenman.wordpress.com/2015/12/18/open-cv-determine-angle-of-
+	 * rotatedrect-minarearect/ for more details
+	 * 
+	 * This normalizes it to a nominal polar framework, where the 0 degrees is
+	 * parallel to the x axis poing to the right. 180 is parallel to the x axis
+	 * pointing to the left.
+	 */
+	double getAdjustedAngle(RotatedRect rRect) {
+		double angle;
+		if (rRect.size.width < rRect.size.height) {
+			angle = 90 - rRect.angle;
+		} else {
+			angle = -rRect.angle;
+		}
+
+		return angle;
 	}
 
 }
