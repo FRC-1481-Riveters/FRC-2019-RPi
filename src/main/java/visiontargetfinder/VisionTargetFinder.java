@@ -118,7 +118,7 @@ public class VisionTargetFinder {
 					continue;
 				}
 
-/* 
+				/* 
 				* If this is a vision target, it'll be a line
 				* that's right in the middle of the rectangle, like this
 				* 
@@ -200,19 +200,22 @@ public class VisionTargetFinder {
 				 */
 				if (isTiltedLikeRightVisionTarget(item.getAngle())) {
 					if (lastLeftTarget != null) {
-						/*
-						 * We DO have a left-side target to pair with it! Pair these two vision targets
-						 * together to make a new VisionTargetPair!
-						 */
-						targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
+						if (areHorizontallyAligned(lastLeftTarget, item)) {
 
-						/*
-						 * Since we've already paired-off this left-side target reset it to null so we
-						 * don't use it again. We want a new left-side target assigned to
-						 * lastLeftTarget, and assigning null will help us know that we don't have a
-						 * left-side target in mind yet.
-						 */
-						lastLeftTarget = null;
+							/*
+							 * We DO have a left-side target to pair with it! Pair these two vision targets
+							 * together to make a new VisionTargetPair!
+							 */
+							targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
+
+							/*
+							 * Since we've already paired-off this left-side target reset it to null so we
+							 * don't use it again. We want a new left-side target assigned to
+							 * lastLeftTarget, and assigning null will help us know that we don't have a
+							 * left-side target in mind yet.
+							 */
+							lastLeftTarget = null;
+						}
 					}
 				}
 			}
@@ -280,6 +283,7 @@ public class VisionTargetFinder {
 		}
 
 		return position;
+
 	}
 
 	float getLineAngle(Mat line) {
@@ -307,6 +311,33 @@ public class VisionTargetFinder {
 
 		return (angle > 10.0 && angle < 30.0);
 
+	}
+
+	/*
+	 * Check if the origins of these two vectors are close to horizontal with each
+	 * other. They must draw a line that's mostly horizontal.
+	 */
+	boolean areHorizontallyAligned(Vec2f first, Vec2f second) {
+		try {
+			double lineAngle = Math.toDegrees(Math.atan((first.y - second.y) / (first.x - second.x)));
+
+			if (lineAngle < -15.0 || lineAngle > 15.0) {
+				/*
+				 * This is not a very horizontal line. Return false indicating that these two
+				 * vector's origins are not on a horizontal enough line.
+				 */
+				return false;
+			}
+		} catch (ArithmeticException e) {
+			/*
+			 * Something went wrong with the calculation. Don't use this filter to filter
+			 * out a pair of vectors' origins. Just return a fake answer.
+			 */
+			System.out.println(String.format("Couldn't compute horizontal line angle between %s and %s", first.dump(),
+					second.dump()));
+		}
+
+		return true;
 	}
 
 }
