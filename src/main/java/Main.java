@@ -103,7 +103,7 @@ public final class Main {
   public static List<SwitchedCameraConfig> switchedCameraConfigs = new ArrayList<>();
   public static List<VideoSource> cameras = new ArrayList<>();
 
-static long fieldOfView = 60;
+  static long fieldOfView = 60;
 
   private Main() {
   }
@@ -259,36 +259,32 @@ static long fieldOfView = 60;
     return camera;
   }
 
-/**
+  /**
    * Start running the switched camera.
    */
   public static MjpegServer startSwitchedCamera(SwitchedCameraConfig config) {
     System.out.println("Starting switched camera '" + config.name + "' on " + config.key);
     MjpegServer server = CameraServer.getInstance().addSwitchedCamera(config.name);
 
-    NetworkTableInstance.getDefault()
-        .getEntry(config.key)
-        .addListener(event -> {
-              if (event.value.isDouble()) {
-                int i = (int) event.value.getDouble();
-                if (i >= 0 && i < cameras.size()) {
-                  server.setSource(cameras.get(i));
-                }
-              } else if (event.value.isString()) {
-                String str = event.value.getString();
-                for (int i = 0; i < cameraConfigs.size(); i++) {
-                  if (str.equals(cameraConfigs.get(i).name)) {
-                    server.setSource(cameras.get(i));
-                    break;
-                  }
-                }
-              }
-            },
-            EntryListenerFlags.kImmediate | EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+    NetworkTableInstance.getDefault().getEntry(config.key).addListener(event -> {
+      if (event.value.isDouble()) {
+        int i = (int) event.value.getDouble();
+        if (i >= 0 && i < cameras.size()) {
+          server.setSource(cameras.get(i));
+        }
+      } else if (event.value.isString()) {
+        String str = event.value.getString();
+        for (int i = 0; i < cameraConfigs.size(); i++) {
+          if (str.equals(cameraConfigs.get(i).name)) {
+            server.setSource(cameras.get(i));
+            break;
+          }
+        }
+      }
+    }, EntryListenerFlags.kImmediate | EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
 
     return server;
   }
-
 
   public static class MyPipeline implements VisionPipeline {
     static float m_target;
@@ -390,7 +386,9 @@ static long fieldOfView = 60;
          * exception. Just use the default, initially set, value intead of what's in the
          * file.
          */
+
         fieldOfView = cameraConfigs.get(0).config.get("FOV").getAsLong();
+        System.out.println(String.format("Set FOV to %d", fieldOfView));
       } catch (Exception e) {
         System.out.println(String.format(
             "Couldn't understand camera's FOV configuration value (ex: FOV: 150 ). Using %d instead.", fieldOfView));
@@ -426,8 +424,8 @@ static long fieldOfView = 60;
            * 
            * 3.14529424,150
            * 
-           * where the floating point number is the heading and the integer is the age of the
-           * information in milliseconds.
+           * where the floating point number is the heading and the integer is the age of
+           * the information in milliseconds.
            */
           targetInformation.setString(String.format("%f,%d", fRelativeTargetHeading, targetProcessingTime));
         }
