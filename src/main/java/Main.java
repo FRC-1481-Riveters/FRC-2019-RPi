@@ -23,6 +23,7 @@ import edu.wpi.cscore.MjpegServer;
 import edu.wpi.cscore.UsbCamera;
 import edu.wpi.cscore.VideoSource;
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.networktables.EntryListenerFlags;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTable;
@@ -67,6 +68,14 @@ import visiontargetfinder.*;
                }
            }
        ]
+       "switched cameras": [
+           {
+               "name": <virtual camera name>
+               "key": <network table key used for selection>
+               // if NT value is a string, it's treated as a name
+               // if NT value is a double, it's treated as an integer index
+           }
+       ]
    }
  */
 
@@ -82,10 +91,19 @@ public final class Main {
     public JsonElement streamConfig;
   }
 
+  @SuppressWarnings("MemberName")
+  public static class SwitchedCameraConfig {
+    public String name;
+    public String key;
+  };
+
   public static int team;
   public static boolean server;
   public static List<CameraConfig> cameraConfigs = new ArrayList<>();
-  static long fieldOfView = 150;
+  public static List<SwitchedCameraConfig> switchedCameraConfigs = new ArrayList<>();
+  public static List<VideoSource> cameras = new ArrayList<>();
+
+static long fieldOfView = 60;
 
   private Main() {
   }
@@ -125,6 +143,32 @@ public final class Main {
     cam.config = config;
 
     cameraConfigs.add(cam);
+    return true;
+  }
+
+  /**
+   * Read single switched camera configuration.
+   */
+  public static boolean readSwitchedCameraConfig(JsonObject config) {
+    SwitchedCameraConfig cam = new SwitchedCameraConfig();
+
+    // name
+    JsonElement nameElement = config.get("name");
+    if (nameElement == null) {
+      parseError("could not read switched camera name");
+      return false;
+    }
+    cam.name = nameElement.getAsString();
+
+    // path
+    JsonElement keyElement = config.get("key");
+    if (keyElement == null) {
+      parseError("switched camera '" + cam.name + "': could not read key");
+      return false;
+    }
+    cam.key = keyElement.getAsString();
+
+    switchedCameraConfigs.add(cam);
     return true;
   }
 
@@ -182,6 +226,15 @@ public final class Main {
       }
     }
 
+    if (obj.has("switched cameras")) {
+      JsonArray switchedCameras = obj.get("switched cameras").getAsJsonArray();
+      for (JsonElement camera : switchedCameras) {
+        if (!readSwitchedCameraConfig(camera.getAsJsonObject())) {
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
@@ -205,6 +258,37 @@ public final class Main {
 
     return camera;
   }
+
+/**
+   * Start running the switched camera.
+   */
+  public static MjpegServer startSwitchedCamera(SwitchedCameraConfig config) {
+    System.out.println("Starting switched camera '" + config.name + "' on " + config.key);
+    MjpegServer server = CameraServer.getInstance().addSwitchedCamera(config.name);
+
+    NetworkTableInstance.getDefault()
+        .getEntry(config.key)
+        .addListener(event -> {
+              if (event.value.isDouble()) {
+                int i = (int) event.value.getDouble();
+                if (i >= 0 && i < cameras.size()) {
+                  server.setSource(cameras.get(i));
+                }
+              } else if (event.value.isString()) {
+                String str = event.value.getString();
+                for (int i = 0; i < cameraConfigs.size(); i++) {
+                  if (str.equals(cameraConfigs.get(i).name)) {
+                    server.setSource(cameras.get(i));
+                    break;
+                  }
+                }
+              }
+            },
+            EntryListenerFlags.kImmediate | EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+
+    return server;
+  }
+
 
   public static class MyPipeline implements VisionPipeline {
     static float m_target;
@@ -280,9 +364,13 @@ public final class Main {
     }
 
     // start cameras
-    List<VideoSource> cameras = new ArrayList<>();
-    for (CameraConfig cameraConfig : cameraConfigs) {
-      cameras.add(startCamera(cameraConfig));
+    for (CameraConfig config : cameraConfigs) {
+      cameras.add(startCamera(config));
+    }
+
+    // start switched cameras
+    for (SwitchedCameraConfig config : switchedCameraConfigs) {
+      startSwitchedCamera(config);
     }
 
     NetworkTable visionTable = ntinst.getTable("Vision");
