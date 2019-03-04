@@ -418,16 +418,17 @@ public final class Main {
 
           /*
            * To keep the information coherent (so that the heading and the time stamp are
-           * coordinated) combine the numbers into a single string and send the whole
-           * string to the RoboRIO together. That way, both pieces of information show up
+           * coordinated) combine the numbers into a single array and send the whole
+           * array to the RoboRIO together. That way, both pieces of information show up
            * at exactly the same time. An example of this output is
            * 
-           * 3.14529424,150
+           * [3.14529424,150.0]
            * 
-           * where the floating point number is the heading and the integer is the age of
+           * where the first floating point number is the heading and the second is the age of
            * the information in milliseconds.
            */
-          targetInformation.setString(String.format("%f,%d", fRelativeTargetHeading, targetProcessingTime));
+
+          targetInformation.setDoubleArray(new double[] { fRelativeTargetHeading, (double) targetProcessingTime });
         }
 
         System.out.println(String.format("visionTargetError:%3.1f degrees, processingTime:%d ms",
