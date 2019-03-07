@@ -61,4 +61,8 @@ public class contourHelper {
 
 		return centerPoint;
 	}
+
+	public double getLength(Point p1, Point p2) {
+		return Math.sqrt(Math.pow(p2.x - p1.x, 2.0) + Math.pow(p2.y - p1.y, 2.0));
+	}
 }

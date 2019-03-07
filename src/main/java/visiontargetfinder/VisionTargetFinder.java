@@ -23,6 +23,11 @@ public class VisionTargetFinder {
 
 	}
 
+	public class TargetInformation {
+		public double normalizedCenter = Double.NaN;
+		public double distanceToTargetNormalized = Double.NaN;
+	}
+
 	private class VisionTargetPair {
 		public RotatedRect LTarget;
 		public RotatedRect RTarget;
@@ -74,9 +79,9 @@ public class VisionTargetFinder {
 
 	}
 
-	public double getVisionTargetLocation(Mat matImage) {
+	public TargetInformation getVisionTargetLocation(Mat matImage) {
 
-		double position = Double.NaN;
+		TargetInformation targetInformation = new TargetInformation(); 
 
 		/*
 		 * Process the image and look for contours that might be vision targets.
@@ -244,6 +249,8 @@ public class VisionTargetFinder {
 						targetPairs.get(0).RTarget.center);
 				double leastDistanceFromCenter = Math.abs((matImage.cols() / 2) - closestCenterPoint.x);
 
+				VisionTargetPair bestTarget = targetPairs.get(0);
+
 				for (int index = 1; index < targetPairs.size(); ++index) {
 
 					Point centerPoint = helper.getCenter(targetPairs.get(index).LTarget.center,
@@ -254,6 +261,8 @@ public class VisionTargetFinder {
 						leastDistanceFromCenter = distanceFromCenter;
 
 						closestCenterPoint = centerPoint;
+
+						bestTarget = targetPairs.get(index);
 					}
 				}
 
@@ -270,13 +279,34 @@ public class VisionTargetFinder {
 				 * all the way to the left.
 				 */
 
-				position = 2.0f * ((closestCenterPoint.x / matImage.cols()) - 0.5f);
+				targetInformation.normalizedCenter = 2.0f * ((closestCenterPoint.x / matImage.cols()) - 0.5f);
+
+				/*
+				 * Compute the distance to target using known features of the target, the
+				 * resolution and the FOV of the camera.
+				 * 
+				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
+				 * 
+				 * We don't know the target width, nor Θ, so just leave those factors out and compute the distance later.
+				 * 
+				 * dNormalized = FOVPixel/Tpixel
+				 * 
+				 */
+				try {
+					targetInformation.distanceToTargetNormalized = (double) matImage.cols()
+							/ helper.getLength(bestTarget.LTarget.center, bestTarget.RTarget.center);
+				} catch (Exception e) {
+					System.out.println(String.format(
+							"Couldn't compute normalized distance from target coordinates %s and %s. %s",
+							bestTarget.LTarget.center.toString(), bestTarget.LTarget.center.toString(), e.toString()));
+					targetInformation.distanceToTargetNormalized = Double.NaN;
+				}
 
 				m_selectedPoint = closestCenterPoint;
 			}
 		}
 
-		return position;
+		return targetInformation;
 
 	}
 

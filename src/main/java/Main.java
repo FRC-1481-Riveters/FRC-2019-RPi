@@ -286,7 +286,7 @@ public final class Main {
   }
 
   public static class MyPipeline implements VisionPipeline {
-    static double m_target;
+    static VisionTargetFinder.TargetInformation m_target;
 
     static final VisionTargetFinder targetFinder = new VisionTargetFinder();
 
@@ -298,7 +298,7 @@ public final class Main {
 
     @Override
     public void process(Mat mat) {
-      double fCurrentTarget;
+      VisionTargetFinder.TargetInformation fCurrentTarget;
 
       m_startingTimeStamp = System.currentTimeMillis();
 
@@ -325,8 +325,8 @@ public final class Main {
       return m_startingTimeStamp;
     }
 
-    public double getTarget() {
-      double fCurrentTarget;
+    public VisionTargetFinder.TargetInformation getTarget() {
+      VisionTargetFinder.TargetInformation fCurrentTarget;
 
       synchronized (targetLock) {
         fCurrentTarget = m_target;
@@ -396,16 +396,19 @@ public final class Main {
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
         long startTime = pipeline.getStartTime();
 
-        double fTargetNormalizedHeading = pipeline.getTarget();
-        double fRelativeTargetHeading = fTargetNormalizedHeading * (double) fieldOfView / 2.0f;
+        
+        VisionTargetFinder.TargetInformation targetDetails = pipeline.getTarget();
+        double fRelativeTargetHeading = targetDetails.normalizedCenter * (double) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
+        double targetDistance = Double.NaN;
+
 
         /*
          * Check if the normalized returned heading is NaN (Not a Number). If it's Not a
          * Number, the target finder failed to find a heading and the value shouldn't be
          * used. Don't send invalid values to the RoboRIO.
          */
-        if (!Double.isNaN(fTargetNormalizedHeading)) {
+        if (!Double.isNaN(targetDetails.normalizedCenter)) {
           /*
            * Tell the roborio what the target's new heading is. Also include the time it
            * took to process this picture. This way, the roboRIO can figure out where it
@@ -427,11 +430,28 @@ public final class Main {
            * the information in milliseconds.
            */
 
-          targetInformation.setDoubleArray(new double[] { fRelativeTargetHeading, (double) targetProcessingTime });
+           			/*
+				 * Compute the distance to target using known features of the target, the
+				 * resolution and the FOV of the camera.
+				 * 
+				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
+				 * 
+				 *  
+				 * dNormalized = FOVPixel/Tpixel
+         * 
+         * So, just compute the rest by multiplying dNormalized * Tin / (2*tanΘ)
+				 * 
+				 */
+          double targetWidth = 11.267601903166458855661396068853; /* Distance between center of targets in inches */
+          targetDistance = targetDetails.distanceToTargetNormalized * targetWidth
+              / (2 * Math.tan(Math.toRadians((double) fieldOfView)));
+
+          targetInformation
+              .setDoubleArray(new double[] { fRelativeTargetHeading, (double) targetProcessingTime, targetDistance });
         }
 
-        System.out.println(String.format("visionTargetError:%3.1f degrees, processingTime:%d ms",
-            fRelativeTargetHeading, targetProcessingTime));
+        System.out.println(String.format("visionTargetError:%3.1f degrees, distance %3.1f, processingTime:%d ms",
+            fRelativeTargetHeading, targetDistance, targetProcessingTime));
 
         outputStream.putFrame(pipeline.getAnnotatedMat());
 
