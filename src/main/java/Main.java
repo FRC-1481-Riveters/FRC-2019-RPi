@@ -81,7 +81,6 @@ import visiontargetfinder.*;
 
 public final class Main {
   private static String configFile = "/boot/frc.json";
-  static float m_lastTargetHeading = Float.NaN;
 
   @SuppressWarnings("MemberName")
   public static class CameraConfig {
@@ -287,7 +286,7 @@ public final class Main {
   }
 
   public static class MyPipeline implements VisionPipeline {
-    static float m_target;
+    static double m_target;
 
     static final VisionTargetFinder targetFinder = new VisionTargetFinder();
 
@@ -299,7 +298,7 @@ public final class Main {
 
     @Override
     public void process(Mat mat) {
-      float fCurrentTarget;
+      double fCurrentTarget;
 
       m_startingTimeStamp = System.currentTimeMillis();
 
@@ -326,8 +325,8 @@ public final class Main {
       return m_startingTimeStamp;
     }
 
-    public float getTarget() {
-      float fCurrentTarget;
+    public double getTarget() {
+      double fCurrentTarget;
 
       synchronized (targetLock) {
         fCurrentTarget = m_target;
@@ -397,8 +396,8 @@ public final class Main {
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
         long startTime = pipeline.getStartTime();
 
-        float fTargetNormalizedHeading = pipeline.getTarget();
-        float fRelativeTargetHeading = fTargetNormalizedHeading * (float) fieldOfView / 2.0f;
+        double fTargetNormalizedHeading = pipeline.getTarget();
+        double fRelativeTargetHeading = fTargetNormalizedHeading * (double) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
 
         /*
@@ -406,7 +405,7 @@ public final class Main {
          * Number, the target finder failed to find a heading and the value shouldn't be
          * used. Don't send invalid values to the RoboRIO.
          */
-        if (!Float.isNaN(fTargetNormalizedHeading)) {
+        if (!Double.isNaN(fTargetNormalizedHeading)) {
           /*
            * Tell the roborio what the target's new heading is. Also include the time it
            * took to process this picture. This way, the roboRIO can figure out where it
@@ -422,7 +421,7 @@ public final class Main {
            * array to the RoboRIO together. That way, both pieces of information show up
            * at exactly the same time. An example of this output is
            * 
-           * [3.14529424,150.0]
+           * [3.14529424,150.0,1.40]
            * 
            * where the first floating point number is the heading and the second is the age of
            * the information in milliseconds.

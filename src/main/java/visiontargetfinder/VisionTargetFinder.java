@@ -74,9 +74,9 @@ public class VisionTargetFinder {
 
 	}
 
-	public float getVisionTargetLocation(Mat matImage) {
+	public double getVisionTargetLocation(Mat matImage) {
 
-		float position = Float.NaN;
+		double position = Double.NaN;
 
 		/*
 		 * Process the image and look for contours that might be vision targets.
@@ -270,7 +270,7 @@ public class VisionTargetFinder {
 				 * all the way to the left.
 				 */
 
-				position = 2.0f * (((float) closestCenterPoint.x / matImage.cols()) - 0.5f);
+				position = 2.0f * ((closestCenterPoint.x / matImage.cols()) - 0.5f);
 
 				m_selectedPoint = closestCenterPoint;
 			}
