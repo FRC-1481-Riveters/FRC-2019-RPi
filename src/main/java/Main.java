@@ -436,15 +436,23 @@ public final class Main {
 				 * 
 				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
 				 * 
+         * Where: 
+         * Θ is 1/2 of the FOV
+         * Tin is the actual width of the target, which is the distance between the centers of the vision targets.
+         * FOVpixel is the width of the display in pixels (the horizontal resolution)
+         * Tpixel is the length of the target in pixels (the distance between the centers of the vision targets in pixels)
 				 *  
 				 * dNormalized = FOVPixel/Tpixel
          * 
+         * 
          * So, just compute the rest by multiplying dNormalized * Tin / (2*tanΘ)
+         * 
+         * 
 				 * 
 				 */
           double targetWidth = 11.267601903166458855661396068853; /* Distance between center of targets in inches */
           targetDistance = targetDetails.distanceToTargetNormalized * targetWidth
-              / (2 * Math.tan(Math.toRadians((double) fieldOfView)));
+              / (2.0 * Math.tan(Math.toRadians((double) fieldOfView / 2.0)));
 
           targetInformation
               .setDoubleArray(new double[] { fRelativeTargetHeading, (double) targetProcessingTime, targetDistance });
