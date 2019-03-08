@@ -1,11 +1,11 @@
 {
     "cameras": [
         {
+            "FOV": 120,
             "brightness": 0,
             "exposure": 1,
-            "fps": 15,
-            "height": 480,
-            "FOV" : 120,
+            "fps": 30,
+            "height": 240,
             "name": "rasp pi",
             "path": "/dev/video0",
             "pixel format": "mjpeg",
@@ -55,10 +55,11 @@
                 "properties": []
             },
             "white balance": "auto",
-            "width": 640
+            "width": 320
         }
     ],
     "ntmode": "client",
     "switched cameras": [],
     "team": 1481
 }
+pi@frcvision(rw):~$
