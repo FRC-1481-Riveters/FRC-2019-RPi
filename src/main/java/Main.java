@@ -376,7 +376,7 @@ public final class Main {
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
 
-      CvSource outputStream = CameraServer.getInstance().putVideo("Annotated Vision", 320, 240);
+      CvSource outputStream = CameraServer.getInstance().putVideo("Annotated Vision", 160, 120);
       try {
         /*
          * Get the first camera's configuration JSONElement "FOV" if it exists, then
