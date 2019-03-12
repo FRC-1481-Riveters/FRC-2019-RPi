@@ -45,9 +45,9 @@ public class VisionTargetFinder {
 
 	public void annotateStream(Mat matImage) {
 
-		/* Draw all the contours we found in green. */
+		/* Draw all the contours we found in blue. */
 		for (int index = 0; index < allContours.size(); ++index) {
-			Imgproc.drawContours(matImage, allContours, index, new Scalar(0, 255, 0));
+			Imgproc.drawContours(matImage, allContours, index, new Scalar(255, 0, 0));
 		}
 
 		/* Draw the good rectangles that we found in blue. */
@@ -55,7 +55,7 @@ public class VisionTargetFinder {
 			Point[] vertices = new Point[4];
 			rRect.points(vertices);
 			for (int j = 0; j < 4; j++) {
-				Imgproc.line(matImage, vertices[j], vertices[(j + 1) % 4], new Scalar(255, 0, 0));
+				Imgproc.line(matImage, vertices[j], vertices[(j + 1) % 4], new Scalar(0, 255, 0));
 			}
 		}
 
@@ -74,7 +74,7 @@ public class VisionTargetFinder {
 
 			/* Draw a thick, vertical line through the target point in red. */
 			Imgproc.line(matImage, new Point(m_selectedPoint.x, 0), new Point(m_selectedPoint.x, matImage.cols()),
-					new Scalar(0, 0, 255), 5);
+					new Scalar(0, 0, 255), 2);
 		}
 
 	}
@@ -132,7 +132,7 @@ public class VisionTargetFinder {
 
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
-				if (ratio < 0.85) {
+				if (ratio < 0.7) {
 					// System.out.println(String.format("Rejected contour with ratio %f,
 					// contour area %f, rectangle
 					// %s",(float)ratio,contourArea,rectangle.toString()));
