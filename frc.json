@@ -5,10 +5,10 @@
             "brightness": 0,
             "exposure": 1,
             "fps": 30,
-            "height": 240,
+            "height": 288,
             "name": "rasp pi",
             "path": "/dev/video0",
-            "pixel format": "mjpeg",
+            "pixel format": "yuyv",
             "properties": [
                 {
                     "name": "connect_verbose",
@@ -55,11 +55,10 @@
                 "properties": []
             },
             "white balance": "auto",
-            "width": 320
+            "width": 352
         }
     ],
     "ntmode": "client",
     "switched cameras": [],
     "team": 1481
 }
-pi@frcvision(rw):~$
