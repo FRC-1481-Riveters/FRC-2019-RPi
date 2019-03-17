@@ -368,10 +368,15 @@ public final class Main {
       startSwitchedCamera(config);
     }
 
-    NetworkTable visionTable = ntinst.getTable("Vision");
-    NetworkTableEntry targetErrorEntry = visionTable.getEntry("targetError");
-    NetworkTableEntry targetProcessingTimeEntry = visionTable.getEntry("targetProcessingTime");
-    NetworkTableEntry targetInformation = visionTable.getEntry("targetInformation");
+    /*
+     * Set the update rate to slower than normal, and call the flush() instead to
+     * send the target information with low latency.
+     *
+     * https://www.chiefdelphi.com/t/networking-a-raspberry-pi/335503/16
+     */
+    ntinst.setUpdateRate(1.0);
+
+    NetworkTableEntry targetInformation = ntinst.getTable("Vision").getEntry("targetInformation");
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
@@ -396,66 +401,65 @@ public final class Main {
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
         long startTime = pipeline.getStartTime();
 
-        
+
         VisionTargetFinder.TargetInformation targetDetails = pipeline.getTarget();
         double fRelativeTargetHeading = targetDetails.normalizedCenter * (double) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
         double targetDistance = Double.NaN;
 
-
+        
         /*
          * Check if the normalized returned heading is NaN (Not a Number). If it's Not a
          * Number, the target finder failed to find a heading and the value shouldn't be
          * used. Don't send invalid values to the RoboRIO.
          */
         if (!Double.isNaN(targetDetails.normalizedCenter)) {
-          /*
-           * Tell the roborio what the target's new heading is. Also include the time it
-           * took to process this picture. This way, the roboRIO can figure out where it
-           * was actually facing at the time the picture was taken, and account for the
-           * lag due to processing the picture
-           */
-          targetErrorEntry.setValue(fRelativeTargetHeading);
-          targetProcessingTimeEntry.setValue(targetProcessingTime);
 
           /*
            * To keep the information coherent (so that the heading and the time stamp are
-           * coordinated) combine the numbers into a single array and send the whole
-           * array to the RoboRIO together. That way, both pieces of information show up
-           * at exactly the same time. An example of this output is
+           * coordinated) combine the numbers into a single array and send the whole array
+           * to the RoboRIO together. That way, both pieces of information show up at
+           * exactly the same time. An example of this output is
            * 
            * [3.14529424,150.0,1.40]
            * 
-           * where the first floating point number is the heading and the second is the age of
-           * the information in milliseconds.
+           * where the first floating point number is the heading and the second is the
+           * age of the information in milliseconds.
            */
 
-           			/*
-				 * Compute the distance to target using known features of the target, the
-				 * resolution and the FOV of the camera.
-				 * 
-				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
-				 * 
-         * Where: 
-         * Θ is 1/2 of the FOV
-         * Tin is the actual width of the target, which is the distance between the centers of the vision targets.
-         * FOVpixel is the width of the display in pixels (the horizontal resolution)
-         * Tpixel is the length of the target in pixels (the distance between the centers of the vision targets in pixels)
-				 *  
-				 * dNormalized = FOVPixel/Tpixel
-         * 
-         * 
-         * So, just compute the rest by multiplying dNormalized * Tin / (2*tanΘ)
-         * 
-         * 
-				 * 
-				 */
+          /*
+           * Compute the distance to target using known features of the target, the
+           * resolution and the FOV of the camera.
+           * 
+           * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
+           * 
+           * Where: Θ is 1/2 of the FOV Tin is the actual width of the target, which is
+           * the distance between the centers of the vision targets. FOVpixel is the width
+           * of the display in pixels (the horizontal resolution) Tpixel is the length of
+           * the target in pixels (the distance between the centers of the vision targets
+           * in pixels)
+           * 
+           * dNormalized = FOVPixel/Tpixel
+           * 
+           * 
+           * So, just compute the rest by multiplying dNormalized * Tin / (2*tanΘ)
+           * 
+           * 
+           * 
+           */
           double targetWidth = 11.267601903166458855661396068853; /* Distance between center of targets in inches */
           targetDistance = targetDetails.distanceToTargetNormalized * targetWidth
               / (2.0 * Math.tan(Math.toRadians((double) fieldOfView / 2.0)));
 
           targetInformation
               .setDoubleArray(new double[] { fRelativeTargetHeading, (double) targetProcessingTime, targetDistance });
+
+          /*
+           * Flush the network table queue to quickly send this network table field to the
+           * roborio. This reduces the network latency of this information to almost
+           * nothing.
+           */
+          targetInformation.getInstance().flush();
         }
 
         System.out.println(String.format("visionTargetError:%3.1f degrees, distance %3.1f, processingTime:%d ms",
