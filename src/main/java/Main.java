@@ -104,7 +104,7 @@ public final class Main {
 
   static long fieldOfView = 60;
 
-  static long autoAssistTargetHeadingLastReceivedTimeStamp;
+  static long autoAssistConnectionTestLastReceivedTimeStamp;
 
   private Main() {
   }
@@ -375,21 +375,19 @@ public final class Main {
     ntinst.setUpdateRate(1.0);
 
     NetworkTableEntry targetInformation = ntinst.getTable("Vision").getEntry("targetInformation");
-    NetworkTableEntry autoAssistTargetHeading = ntinst.getTable("SmartDashboard").getEntry("autoAssistTargetHeading");
-
+      NetworkTableEntry autoAssistConnectionTest = NetworkTableInstance.getDefault().getTable("Vision")
+    .getEntry("autoAssistConnectionTest");
     /*
      * Get a timestamp that represents the last time we received something from the
-     * Roborio. Thsi particular signal is transmitted when the roborio computes a
-     * new autoassist heading, which happens just after the vision processor sends
-     * targetInformation. Thus, this is a good
+     * Roborio. This particular signal is transmitted every 500 ms. Thus, this is a good
      * "Hi. I'm the roborio and I'm listening to you." message. Use this timestamp
      * later to see if the roborio has stopped listening to us.
      * 
      * This signal is not otherwise used by the vision processor.
      */
-    autoAssistTargetHeading.addListener(event -> {
-      autoAssistTargetHeadingLastReceivedTimeStamp = System.currentTimeMillis();
-    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate | EntryListenerFlags.kImmediate);
+    autoAssistConnectionTest.addListener(event -> {
+      autoAssistConnectionTestLastReceivedTimeStamp = System.currentTimeMillis();
+    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
@@ -493,7 +491,7 @@ public final class Main {
          * been too long, assume that something's gone amiss with the NetworkTables
          * connection to the roborio and do something about it.
          */
-        long timeSinceLastRoborioEcho = System.currentTimeMillis() - autoAssistTargetHeadingLastReceivedTimeStamp;
+        long timeSinceLastRoborioEcho = System.currentTimeMillis() - autoAssistConnectionTestLastReceivedTimeStamp;
 
         try {
           if (timeSinceLastRoborioEcho > 1000) {
