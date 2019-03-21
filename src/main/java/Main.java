@@ -26,7 +26,7 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.EntryListenerFlags;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.ConnectionInfo;
 import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
 import edu.wpi.cscore.CvSource;
@@ -103,6 +103,8 @@ public final class Main {
   public static List<VideoSource> cameras = new ArrayList<>();
 
   static long fieldOfView = 60;
+
+  static long autoAssistTargetHeadingLastReceivedTimeStamp;
 
   private Main() {
   }
@@ -350,13 +352,9 @@ public final class Main {
 
     // start NetworkTables
     NetworkTableInstance ntinst = NetworkTableInstance.getDefault();
-    if (server) {
-      System.out.println("Setting up NetworkTables server");
-      ntinst.startServer();
-    } else {
-      System.out.println("Setting up NetworkTables client for team " + team);
-      ntinst.startClientTeam(team);
-    }
+
+    System.out.println("Setting up NetworkTables client for team " + team);
+    ntinst.startClientTeam(team);
 
     // start cameras
     for (CameraConfig config : cameraConfigs) {
@@ -377,6 +375,21 @@ public final class Main {
     ntinst.setUpdateRate(1.0);
 
     NetworkTableEntry targetInformation = ntinst.getTable("Vision").getEntry("targetInformation");
+    NetworkTableEntry autoAssistTargetHeading = ntinst.getTable("SmartDashboard").getEntry("autoAssistTargetHeading");
+
+    /*
+     * Get a timestamp that represents the last time we received something from the
+     * Roborio. Thsi particular signal is transmitted when the roborio computes a
+     * new autoassist heading, which happens just after the vision processor sends
+     * targetInformation. Thus, this is a good
+     * "Hi. I'm the roborio and I'm listening to you." message. Use this timestamp
+     * later to see if the roborio has stopped listening to us.
+     * 
+     * This signal is not otherwise used by the vision processor.
+     */
+    autoAssistTargetHeading.addListener(event -> {
+      autoAssistTargetHeadingLastReceivedTimeStamp = System.currentTimeMillis();
+    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate | EntryListenerFlags.kImmediate);
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
@@ -401,13 +414,11 @@ public final class Main {
       VisionThread visionThread = new VisionThread(cameras.get(0), new MyPipeline(), pipeline -> {
         long startTime = pipeline.getStartTime();
 
-
         VisionTargetFinder.TargetInformation targetDetails = pipeline.getTarget();
         double fRelativeTargetHeading = targetDetails.normalizedCenter * (double) fieldOfView / 2.0f;
         long targetProcessingTime = System.currentTimeMillis() - startTime;
         double targetDistance = Double.NaN;
 
-        
         /*
          * Check if the normalized returned heading is NaN (Not a Number). If it's Not a
          * Number, the target finder failed to find a heading and the value shouldn't be
@@ -475,7 +486,38 @@ public final class Main {
     // loop forever
     for (;;) {
       try {
-        Thread.sleep(10000);
+        Thread.sleep(1000);
+
+        /*
+         * Determine how long it's been since we last heard from the roborio. If it's
+         * been too long, assume that something's gone amiss with the NetworkTables
+         * connection to the roborio and do something about it.
+         */
+        long timeSinceLastRoborioEcho = System.currentTimeMillis() - autoAssistTargetHeadingLastReceivedTimeStamp;
+
+        try {
+          if (timeSinceLastRoborioEcho > 1000) {
+            /*
+             * It's been too long since we last heard from the roborio. Assume that
+             * something has gone wrong with the NetworkTables communication. Stop it and
+             * restart it.
+             * 
+             * Don't do this too often as it'll increase the latency of the things we send
+             * over network tables, but don't wait too long to try to fix communications
+             * between the vision processor and the roborio if it's gone amiss. 1 second is
+             * plenty long enough to wait for the roborio. Do something if it's been longer
+             * than that since we've heard from the roborio.
+             */
+            System.out.println(
+                String.format("Restarting networktables client because I haven't heard from the roborio for %d ms",
+                    timeSinceLastRoborioEcho));
+            ntinst.stopClient();
+            ntinst.startClientTeam(team);
+          }
+        } catch (Exception ex) {
+          System.out.println(String.format("Exception caught while testing roborio echo delay:%s", ex.toString()));
+        }
+
       } catch (InterruptedException ex) {
         return;
       }
