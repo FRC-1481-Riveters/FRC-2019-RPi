@@ -1,7 +1,7 @@
 {
     "cameras": [
         {
-            "FOV": 120,
+            "FOV": 105,
             "brightness": 0,
             "exposure": 1,
             "fps": 30,
