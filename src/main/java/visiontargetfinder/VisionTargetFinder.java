@@ -10,6 +10,9 @@ import org.opencv.imgproc.Imgproc;
 import visionhelper.contourHelper;
 import visiontargetfilter.*;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class VisionTargetFinder {
 
 	VisionTargetFilter visionTargetFilter;
@@ -76,6 +79,10 @@ public class VisionTargetFinder {
 			Imgproc.line(matImage, new Point(m_selectedPoint.x, 0), new Point(m_selectedPoint.x, matImage.cols()),
 					new Scalar(0, 0, 255), 2);
 		}
+
+		
+    	SimpleDateFormat formatter = new SimpleDateFormat("MM/dd hh:mm:ss.SSS");
+		Imgproc.putText(matImage, formatter.format(new Date()), new Point(1, 25), Core.FONT_HERSHEY_SIMPLEX, 0.75, new Scalar(0, 0, 255));
 
 	}
 

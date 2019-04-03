@@ -26,7 +26,6 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.EntryListenerFlags;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.ConnectionInfo;
 import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
 import edu.wpi.cscore.CvSource;
@@ -34,6 +33,10 @@ import edu.wpi.cscore.CvSource;
 import org.opencv.core.Mat;
 
 import visiontargetfinder.*;
+
+import java.lang.Process;
+import java.lang.Runtime;
+import java.util.Date;
 
 /*
    JSON format:
@@ -377,17 +380,41 @@ public final class Main {
     NetworkTableEntry targetInformation = ntinst.getTable("Vision").getEntry("targetInformation");
       NetworkTableEntry autoAssistConnectionTest = NetworkTableInstance.getDefault().getTable("Vision")
     .getEntry("autoAssistConnectionTest");
-    /*
+     /*
      * Get a timestamp that represents the last time we received something from the
      * Roborio. This particular signal is transmitted every 500 ms. Thus, this is a good
      * "Hi. I'm the roborio and I'm listening to you." message. Use this timestamp
      * later to see if the roborio has stopped listening to us.
      * 
-     * This signal is not otherwise used by the vision processor.
+     * Try to coordinate system times between the roborio and the raspberry pi so that
+     * timestamps on annotated video is easy to combine with log entries.
      */
-    autoAssistConnectionTest.addListener(event -> {
-      autoAssistConnectionTestLastReceivedTimeStamp = System.currentTimeMillis();
-    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+		autoAssistConnectionTest.addListener(event -> {
+			autoAssistConnectionTestLastReceivedTimeStamp = System.currentTimeMillis();
+			double millisecondsSinceEpochOnRoboRIO = event.value.getDouble();
+
+			/*
+			 * Check if the RPi's system time is more than 0.5 seconds different from the
+			 * RoboRIO's system time.
+			 * 
+			 * If it is, update the RPi's system clock to the RoboRIO's system clock.
+			 */
+			if (Math.abs(System.currentTimeMillis() - (long) millisecondsSinceEpochOnRoboRIO) > 500) {
+				new Thread(() -> {
+					try {
+						Runtime runTime = Runtime.getRuntime();
+						Process process = runTime
+								.exec(String.format("sudo date -s '@%.3f'", millisecondsSinceEpochOnRoboRIO / 1000.0));
+						process.waitFor();
+
+						System.out.format("Updated the RPi's system clock to %s", new Date().toString());
+					} catch (Exception e) {
+						System.out.format("Couldn't set system time from %d:%s", (long) millisecondsSinceEpochOnRoboRIO,
+								e.toString());
+					}
+				}).start();
+			}
+		}, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
