@@ -389,7 +389,7 @@ public final class Main {
      * that timestamps on annotated video is easy to combine with log entries.
      */
     autoAssistConnectionTest.addListener(event -> {
-      autoAssistConnectionTestLastReceivedTimeStamp = System.currentTimeMillis();
+
       double millisecondsSinceEpochOnRoboRIO = event.value.getDouble();
 
       /*
@@ -410,6 +410,9 @@ public final class Main {
         }
 
       }
+
+      autoAssistConnectionTestLastReceivedTimeStamp = System.currentTimeMillis();
+      
     }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
 
     // start image processing on camera 0 if present
