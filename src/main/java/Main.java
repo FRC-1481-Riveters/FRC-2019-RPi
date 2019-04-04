@@ -404,12 +404,12 @@ public final class Main {
 					try {
 						Runtime runTime = Runtime.getRuntime();
 						Process process = runTime
-								.exec(String.format("sudo date -s '@%.3f'", millisecondsSinceEpochOnRoboRIO / 1000.0));
+								.exec(String.format("sudo date -s \"@%.3f\"", millisecondsSinceEpochOnRoboRIO / 1000.0));
 						process.waitFor();
 
-						System.out.format("Updated the RPi's system clock to %s", new Date().toString());
+						System.out.format("Updated the RPi's system clock to %s%n", new Date().toString());
 					} catch (Exception e) {
-						System.out.format("Couldn't set system time from %d:%s", (long) millisecondsSinceEpochOnRoboRIO,
+						System.out.format("Couldn't set system time from %d:%s%n", (long) millisecondsSinceEpochOnRoboRIO,
 								e.toString());
 					}
 				}).start();
