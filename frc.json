@@ -1,11 +1,11 @@
 {
     "cameras": [
         {
-            "FOV": 105,
+            "FOV": 125,
             "brightness": 0,
             "exposure": 1,
             "fps": 30,
-            "height": 288,
+            "height": 480,
             "name": "rasp pi",
             "path": "/dev/video0",
             "pixel format": "yuyv",
@@ -55,7 +55,7 @@
                 "properties": []
             },
             "white balance": "auto",
-            "width": 352
+            "width": 640
         }
     ],
     "ntmode": "client",
