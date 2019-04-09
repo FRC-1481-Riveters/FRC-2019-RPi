@@ -326,13 +326,13 @@ public class VisionTargetFinder {
 
 	boolean isTiltedLikeLeftVisionTarget(double angle) {
 
-		return (angle < 85.7 && angle > 55.7);
+		return (angle < 90.0 && angle > 55.7);
 
 	}
 
 	boolean isTiltedLikeRightVisionTarget(double angle) {
 
-		return (angle > 94.3 && angle < 124.3);
+		return (angle > 90.0 && angle < 124.3);
 
 	}
 
@@ -345,7 +345,7 @@ public class VisionTargetFinder {
 			double lineAngle = Math
 					.toDegrees(Math.atan((first.center.y - second.center.y) / (first.center.x - second.center.x)));
 
-			if (lineAngle < -15.0 || lineAngle > 15.0) {
+			if (lineAngle < -25.0 || lineAngle > 25.0) {
 				/*
 				 * This is not a very horizontal line. Return false indicating that these two
 				 * rectangles's origins are not on a horizontal enough line.
