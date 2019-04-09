@@ -40,9 +40,9 @@ public class VisionTargetFilter {
 	public void process(Mat source0) {
 		// Step HSL_Threshold0:
 		Mat hslThresholdInput = source0;
-		double[] hslThresholdHue = {0.0, 73.29572237019306};
-		double[] hslThresholdSaturation = {1.7054619021081494, 255.0};
-		double[] hslThresholdLuminance = {75.52159293950035, 254.0149392845467};
+		double[] hslThresholdHue = {30.945525275808915, 65.17032177439398};
+		double[] hslThresholdSaturation = {56.477471668821686, 254.73603854369193};
+		double[] hslThresholdLuminance = {33.68730182630592, 255.0};
 		hslThreshold(hslThresholdInput, hslThresholdHue, hslThresholdSaturation, hslThresholdLuminance, hslThresholdOutput);
 
 		// Step Find_Contours0:
