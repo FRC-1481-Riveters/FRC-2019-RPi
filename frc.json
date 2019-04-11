@@ -4,7 +4,7 @@
             "FOV": 125,
             "brightness": 0,
             "exposure": 1,
-            "fps": 30,
+            "fps": 15,
             "height": 480,
             "name": "rasp pi",
             "path": "/dev/video0",
@@ -62,3 +62,4 @@
     "switched cameras": [],
     "team": 1481
 }
+
