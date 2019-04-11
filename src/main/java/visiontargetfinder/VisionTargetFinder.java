@@ -80,15 +80,15 @@ public class VisionTargetFinder {
 					new Scalar(0, 0, 255), 2);
 		}
 
-		
-    	SimpleDateFormat formatter = new SimpleDateFormat("MM/dd hh:mm:ss.SSS");
-		Imgproc.putText(matImage, formatter.format(new Date()), new Point(1, 25), Core.FONT_HERSHEY_SIMPLEX, 0.75, new Scalar(0, 0, 255));
+		SimpleDateFormat formatter = new SimpleDateFormat("MM/dd hh:mm:ss.SSS");
+		Imgproc.putText(matImage, formatter.format(new Date()), new Point(1, 25), Core.FONT_HERSHEY_SIMPLEX, 0.75,
+				new Scalar(0, 0, 255));
 
 	}
 
 	public TargetInformation getVisionTargetLocation(Mat matImage) {
 
-		TargetInformation targetInformation = new TargetInformation(); 
+		TargetInformation targetInformation = new TargetInformation();
 
 		/*
 		 * Process the image and look for contours that might be vision targets.
@@ -205,21 +205,32 @@ public class VisionTargetFinder {
 				 */
 				if (isTiltedLikeRightVisionTarget(getAdjustedAngle(item))) {
 					if (lastLeftTarget != null) {
-						if (areHorizontallyAligned(lastLeftTarget, item)) {
+						/*
+						 * Check if the two targets of similar area. If they aren't, don't combine them
+						 * as a pair.
+						 */
+						if (areSimilarAreas(lastLeftTarget, item)) {
 
 							/*
-							 * We DO have a left-side target to pair with it! Pair these two vision targets
-							 * together to make a new VisionTargetPair!
+							 * Check if the two targets are about horizontally aligned. If they aren't,
+							 * don't combine them as a pair.
 							 */
-							targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
+							if (areHorizontallyAligned(lastLeftTarget, item)) {
 
-							/*
-							 * Since we've already paired-off this left-side target reset it to null so we
-							 * don't use it again. We want a new left-side target assigned to
-							 * lastLeftTarget, and assigning null will help us know that we don't have a
-							 * left-side target in mind yet.
-							 */
-							lastLeftTarget = null;
+								/*
+								 * We DO have a left-side target to pair with it! Pair these two vision targets
+								 * together to make a new VisionTargetPair!
+								 */
+								targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
+
+								/*
+								 * Since we've already paired-off this left-side target reset it to null so we
+								 * don't use it again. We want a new left-side target assigned to
+								 * lastLeftTarget, and assigning null will help us know that we don't have a
+								 * left-side target in mind yet.
+								 */
+								lastLeftTarget = null;
+							}
 						}
 					}
 				}
@@ -294,7 +305,8 @@ public class VisionTargetFinder {
 				 * 
 				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
 				 * 
-				 * We don't know the target width, nor Θ, so just leave those factors out and compute the distance later.
+				 * We don't know the target width, nor Θ, so just leave those factors out and 
+				 * ompute the distance later.
 				 * 
 				 * dNormalized = FOVPixel/Tpixel
 				 * 
@@ -334,6 +346,30 @@ public class VisionTargetFinder {
 
 		return (angle > 90.0 && angle < 124.3);
 
+	}
+
+	/*
+	 * Check if the origins of these two rectangles are close to horizontal with
+	 * each other. They must draw a line that's mostly horizontal.
+	 */
+	boolean areSimilarAreas(RotatedRect first, RotatedRect second) {
+		try {
+			double firstArea = first.size.area();
+			double secondArea = second.size.area();
+
+			if ((firstArea < (0.5 * secondArea)) || (firstArea > (1.5 * secondArea))) {
+				return false;
+			}
+		} catch (ArithmeticException e) {
+			/*
+			 * Something went wrong with the calculation. Don't use this filter to filter
+			 * out a pair of rectangles' areas. Just return a fake answer.
+			 */
+			System.out.println(
+					String.format("Couldn't compare areas between %s and %s", first.toString(), second.toString()));
+		}
+
+		return true;
 	}
 
 	/*
