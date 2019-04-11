@@ -9,20 +9,20 @@
       <grip:Input step="0" socket="0"/>
       <grip:Input step="0" socket="1">
         <value>
-          <double>0.0</double>
-          <double>73.29572237019306</double>
+          <double>5.051343174626373</double>
+          <double>46.03220603007637</double>
         </value>
       </grip:Input>
       <grip:Input step="0" socket="2">
         <value>
-          <double>1.7054619021081494</double>
+          <double>61.32776406038153</double>
           <double>255.0</double>
         </value>
       </grip:Input>
       <grip:Input step="0" socket="3">
         <value>
-          <double>75.52159293950035</double>
-          <double>254.0149392845467</double>
+          <double>103.3035400436875</double>
+          <double>212.1723130098942</double>
         </value>
       </grip:Input>
       <grip:Output step="0" socket="0" previewed="true"/>
@@ -41,16 +41,16 @@
   </steps>
   <connections>
     <grip:Connection>
-      <grip:Output step="1" socket="0" previewed="false"/>
-      <grip:Input step="2" socket="0"/>
+      <grip:Output source="0" socket="0" previewed="true"/>
+      <grip:Input step="0" socket="0"/>
     </grip:Connection>
     <grip:Connection>
       <grip:Output step="0" socket="0" previewed="true"/>
       <grip:Input step="1" socket="0"/>
     </grip:Connection>
     <grip:Connection>
-      <grip:Output source="0" socket="0" previewed="true"/>
-      <grip:Input step="0" socket="0"/>
+      <grip:Output step="1" socket="0" previewed="false"/>
+      <grip:Input step="2" socket="0"/>
     </grip:Connection>
   </connections>
   <settings>
@@ -66,7 +66,7 @@
     <language>Java</language>
     <className>VisionTargetFilter</className>
     <implementWpilibPipeline>false</implementWpilibPipeline>
-    <saveDir>C:\Users\Riveters\Desktop\RPi Vision\src\main\java\visiontargetfilter</saveDir>
+    <saveDir>C:\Users\Riveters\Desktop\RPi\src\main\java\visiontargetfilter</saveDir>
     <packageName>visiontargetfilter</packageName>
     <moduleName>grip</moduleName>
   </codeGenerationSettings>
