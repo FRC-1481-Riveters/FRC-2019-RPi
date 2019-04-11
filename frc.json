@@ -1,0 +1,65 @@
+{
+    "cameras": [
+        {
+            "FOV": 125,
+            "brightness": 0,
+            "exposure": 1,
+            "fps": 15,
+            "height": 480,
+            "name": "rasp pi",
+            "path": "/dev/video0",
+            "pixel format": "yuyv",
+            "properties": [
+                {
+                    "name": "connect_verbose",
+                    "value": 0
+                },
+                {
+                    "name": "contrast",
+                    "value": 45
+                },
+                {
+                    "name": "saturation",
+                    "value": 97
+                },
+                {
+                    "name": "hue",
+                    "value": 35
+                },
+                {
+                    "name": "gamma",
+                    "value": 100
+                },
+                {
+                    "name": "gain",
+                    "value": 23
+                },
+                {
+                    "name": "power_line_frequency",
+                    "value": 2
+                },
+                {
+                    "name": "sharpness",
+                    "value": 38
+                },
+                {
+                    "name": "backlight_compensation",
+                    "value": 0
+                },
+                {
+                    "name": "exposure_auto_priority",
+                    "value": false
+                }
+            ],
+            "stream": {
+                "properties": []
+            },
+            "white balance": "auto",
+            "width": 640
+        }
+    ],
+    "ntmode": "client",
+    "switched cameras": [],
+    "team": 1481
+}
+

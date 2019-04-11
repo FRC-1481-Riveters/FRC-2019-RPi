@@ -10,6 +10,9 @@ import org.opencv.imgproc.Imgproc;
 import visionhelper.contourHelper;
 import visiontargetfilter.*;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class VisionTargetFinder {
 
 	VisionTargetFilter visionTargetFilter;
@@ -21,6 +24,11 @@ public class VisionTargetFinder {
 
 		visionTargetFilter = new VisionTargetFilter();
 
+	}
+
+	public class TargetInformation {
+		public double normalizedCenter = Double.NaN;
+		public double distanceToTargetNormalized = Double.NaN;
 	}
 
 	private class VisionTargetPair {
@@ -40,9 +48,9 @@ public class VisionTargetFinder {
 
 	public void annotateStream(Mat matImage) {
 
-		/* Draw all the contours we found in green. */
+		/* Draw all the contours we found in blue. */
 		for (int index = 0; index < allContours.size(); ++index) {
-			Imgproc.drawContours(matImage, allContours, index, new Scalar(0, 255, 0));
+			Imgproc.drawContours(matImage, allContours, index, new Scalar(255, 0, 0));
 		}
 
 		/* Draw the good rectangles that we found in blue. */
@@ -50,7 +58,7 @@ public class VisionTargetFinder {
 			Point[] vertices = new Point[4];
 			rRect.points(vertices);
 			for (int j = 0; j < 4; j++) {
-				Imgproc.line(matImage, vertices[j], vertices[(j + 1) % 4], new Scalar(255, 0, 0));
+				Imgproc.line(matImage, vertices[j], vertices[(j + 1) % 4], new Scalar(0, 255, 0));
 			}
 		}
 
@@ -69,14 +77,18 @@ public class VisionTargetFinder {
 
 			/* Draw a thick, vertical line through the target point in red. */
 			Imgproc.line(matImage, new Point(m_selectedPoint.x, 0), new Point(m_selectedPoint.x, matImage.cols()),
-					new Scalar(0, 0, 255), 5);
+					new Scalar(0, 0, 255), 2);
 		}
+
+		
+    	SimpleDateFormat formatter = new SimpleDateFormat("MM/dd hh:mm:ss.SSS");
+		Imgproc.putText(matImage, formatter.format(new Date()), new Point(1, 25), Core.FONT_HERSHEY_SIMPLEX, 0.75, new Scalar(0, 0, 255));
 
 	}
 
-	public float getVisionTargetLocation(Mat matImage) {
+	public TargetInformation getVisionTargetLocation(Mat matImage) {
 
-		float position = Float.NaN;
+		TargetInformation targetInformation = new TargetInformation(); 
 
 		/*
 		 * Process the image and look for contours that might be vision targets.
@@ -127,7 +139,7 @@ public class VisionTargetFinder {
 
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
-				if (ratio < 0.85) {
+				if (ratio < 0.6) {
 					// System.out.println(String.format("Rejected contour with ratio %f,
 					// contour area %f, rectangle
 					// %s",(float)ratio,contourArea,rectangle.toString()));
@@ -244,6 +256,8 @@ public class VisionTargetFinder {
 						targetPairs.get(0).RTarget.center);
 				double leastDistanceFromCenter = Math.abs((matImage.cols() / 2) - closestCenterPoint.x);
 
+				VisionTargetPair bestTarget = targetPairs.get(0);
+
 				for (int index = 1; index < targetPairs.size(); ++index) {
 
 					Point centerPoint = helper.getCenter(targetPairs.get(index).LTarget.center,
@@ -254,6 +268,8 @@ public class VisionTargetFinder {
 						leastDistanceFromCenter = distanceFromCenter;
 
 						closestCenterPoint = centerPoint;
+
+						bestTarget = targetPairs.get(index);
 					}
 				}
 
@@ -270,13 +286,34 @@ public class VisionTargetFinder {
 				 * all the way to the left.
 				 */
 
-				position = 2.0f * (((float) closestCenterPoint.x / matImage.cols()) - 0.5f);
+				targetInformation.normalizedCenter = 2.0f * ((closestCenterPoint.x / matImage.cols()) - 0.5f);
+
+				/*
+				 * Compute the distance to target using known features of the target, the
+				 * resolution and the FOV of the camera.
+				 * 
+				 * d = Tin*FOVpixel/(2*Tpixel*tanΘ)
+				 * 
+				 * We don't know the target width, nor Θ, so just leave those factors out and compute the distance later.
+				 * 
+				 * dNormalized = FOVPixel/Tpixel
+				 * 
+				 */
+				try {
+					targetInformation.distanceToTargetNormalized = (double) matImage.cols()
+							/ helper.getLength(bestTarget.LTarget.center, bestTarget.RTarget.center);
+				} catch (Exception e) {
+					System.out.println(String.format(
+							"Couldn't compute normalized distance from target coordinates %s and %s. %s",
+							bestTarget.LTarget.center.toString(), bestTarget.LTarget.center.toString(), e.toString()));
+					targetInformation.distanceToTargetNormalized = Double.NaN;
+				}
 
 				m_selectedPoint = closestCenterPoint;
 			}
 		}
 
-		return position;
+		return targetInformation;
 
 	}
 
@@ -289,13 +326,13 @@ public class VisionTargetFinder {
 
 	boolean isTiltedLikeLeftVisionTarget(double angle) {
 
-		return (angle < 85.7 && angle > 55.7);
+		return (angle < 90.0 && angle > 55.7);
 
 	}
 
 	boolean isTiltedLikeRightVisionTarget(double angle) {
 
-		return (angle > 94.3 && angle < 124.3);
+		return (angle > 90.0 && angle < 124.3);
 
 	}
 
@@ -308,7 +345,7 @@ public class VisionTargetFinder {
 			double lineAngle = Math
 					.toDegrees(Math.atan((first.center.y - second.center.y) / (first.center.x - second.center.x)));
 
-			if (lineAngle < -15.0 || lineAngle > 15.0) {
+			if (lineAngle < -25.0 || lineAngle > 25.0) {
 				/*
 				 * This is not a very horizontal line. Return false indicating that these two
 				 * rectangles's origins are not on a horizontal enough line.
