@@ -216,20 +216,21 @@ public class VisionTargetFinder {
 							 * don't combine them as a pair.
 							 */
 							if (areHorizontallyAligned(lastLeftTarget, item)) {
+								if (isDispersed(lastLeftTarget, item, matImage)) {
+									/*
+									 * We DO have a left-side target to pair with it! Pair these two vision targets
+									 * together to make a new VisionTargetPair!
+									 */
+									targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
 
-								/*
-								 * We DO have a left-side target to pair with it! Pair these two vision targets
-								 * together to make a new VisionTargetPair!
-								 */
-								targetPairs.add(new VisionTargetPair(lastLeftTarget, item));
-
-								/*
-								 * Since we've already paired-off this left-side target reset it to null so we
-								 * don't use it again. We want a new left-side target assigned to
-								 * lastLeftTarget, and assigning null will help us know that we don't have a
-								 * left-side target in mind yet.
-								 */
-								lastLeftTarget = null;
+									/*
+									 * Since we've already paired-off this left-side target reset it to null so we
+									 * don't use it again. We want a new left-side target assigned to
+									 * lastLeftTarget, and assigning null will help us know that we don't have a
+									 * left-side target in mind yet.
+									 */
+									lastLeftTarget = null;
+								}
 							}
 						}
 					}
@@ -418,6 +419,20 @@ public class VisionTargetFinder {
 		}
 
 		return angle;
+	}
+
+	boolean isDispersed(RotatedRect first, RotatedRect second, Mat matImage) {
+		try {
+			double distance = Math.hypot(first.center.y - second.center.y, first.center.x - second.center.x);
+			double magicRatio = distance / matImage.cols();
+			if (magicRatio < 0.0365) {
+				return false;
+			} else {
+				return true;
+			}
+		} catch (ArithmeticException a) {
+			return false;
+		}
 	}
 
 }
