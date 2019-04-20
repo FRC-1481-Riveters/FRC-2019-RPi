@@ -136,7 +136,6 @@ public class VisionTargetFinder {
 
 				RotatedRect rectangle = helper.getRotatedRectangle(item);
 				double rectangleArea = rectangle.size.area();
-
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
 				if (ratio < 0.6) {
@@ -145,7 +144,12 @@ public class VisionTargetFinder {
 					// %s",(float)ratio,contourArea,rectangle.toString()));
 					continue;
 				}
-
+				double rectangleRatioArea = rectangleArea / (matImage.cols() * matImage.rows());
+				if (rectangleRatioArea < 5.6251e-4) {
+					//	System.out.printf("rectangleRatioArea %f, rectangle%s,",
+					//			rectangleRatioArea, rectangle.toString());
+					continue;
+				}
 				/*
 				 * Figure out the angle of the rectangle and check to see if it's canted to the
 				 * right or the left at the correct angle. If it's the right angle (for a left
