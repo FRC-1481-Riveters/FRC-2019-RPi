@@ -1,12 +1,10 @@
 {
     "cameras": [
         {
-            "FOV": 125,
-            "brightness": 0,
-            "exposure": 1,
+            "brightness": 58,
             "fps": 15,
             "height": 480,
-            "name": "rasp pi",
+            "name": "eduardo",
             "path": "/dev/video0",
             "pixel format": "yuyv",
             "properties": [
@@ -62,4 +60,3 @@
     "switched cameras": [],
     "team": 1481
 }
-

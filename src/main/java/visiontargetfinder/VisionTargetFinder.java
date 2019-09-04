@@ -139,15 +139,12 @@ public class VisionTargetFinder {
 				double ratio = Math.min(contourArea, rectangleArea) / Math.max(contourArea, rectangleArea);
 
 				if (ratio < 0.6) {
-					// System.out.println(String.format("Rejected contour with ratio %f,
-					// contour area %f, rectangle
-					// %s",(float)ratio,contourArea,rectangle.toString()));
+					//System.out.println(String.format("Rejected contour with ratio %f,contour area %f, rectangle%s",(float)ratio,contourArea,rectangle.toString()));
 					continue;
 				}
 				double rectangleRatioArea = rectangleArea / (matImage.cols() * matImage.rows());
 				if (rectangleRatioArea < 5.6251e-4) {
-					//	System.out.printf("rectangleRatioArea %f, rectangle%s,",
-					//			rectangleRatioArea, rectangle.toString());
+					// System.out.printf("rectangleRatioArea %f, rectangle%s,",rectangleRatioArea, rectangle.toString());
 					continue;
 				}
 				/*
@@ -160,6 +157,7 @@ public class VisionTargetFinder {
 				double lineAngle = getAdjustedAngle(rectangle);
 
 				if (!isTiltedLikeVisionTarget(lineAngle)) {
+					// System.out.printf("!isTiltedLikeVisionTarget,%f,",lineAngle);
 					continue;
 				}
 
