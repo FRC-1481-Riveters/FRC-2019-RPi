@@ -43,7 +43,7 @@ public class VisionTargetFilter {
 		Mat hslThresholdInput = source0;
 		double[] hslThresholdHue = {0.0, 180.0};
 		double[] hslThresholdSaturation = {0.0, 255.0};
-		double[] hslThresholdLuminance = {220.5744022456925, 254.8189948985966};
+		double[] hslThresholdLuminance = {182.1563231496473, 254.8189948985966};
 		hslThreshold(hslThresholdInput, hslThresholdHue, hslThresholdSaturation, hslThresholdLuminance, hslThresholdOutput);
 
 		// Step Find_Contours0:
